@@ -10,9 +10,61 @@
 // 4. Clique em "Add upload preset", mude o Signing Mode para "Unsigned", salve
 // 5. Copie o nome do preset e preencha os dois campos abaixo
 const CLOUDINARY_CONFIG = {
-    cloudName: 'ywgifjw1',       // ex: dxyzabc123
-    uploadPreset: 'cx1rkuny'  // ex: baiano_confirma_uploads
+    cloudName: 'SEU_CLOUD_NAME',       // ex: dxyzabc123
+    uploadPreset: 'SEU_UPLOAD_PRESET'  // ex: baiano_confirma_uploads
 };
+
+// ===== CONFIGURAÇÃO DO FIREBASE (lista compartilhada de confirmações) =====
+// Diferente do token do GitHub, essas chaves do Firebase são feitas pra
+// ficar públicas no código do navegador — a segurança de verdade fica nas
+// "Regras" (Security Rules) do Firestore, configuradas no console.
+//
+// COMO CONFIGURAR:
+// 1. Vá em https://console.firebase.google.com e crie um projeto (grátis)
+// 2. No projeto, clique no ícone "</>" (Adicionar app da Web), dê um nome e registre
+// 3. O Firebase mostra um objeto firebaseConfig — copie os valores pra baixo
+// 4. No menu lateral, vá em "Firestore Database" > "Criar banco de dados"
+//    (pode escolher "modo de teste" pra começar rápido)
+// 5. Na aba "Regras" do Firestore, use algo como:
+//    rules_version = '2';
+//    service cloud.firestore {
+//      match /databases/{database}/documents {
+//        match /arquivos/{doc} {
+//          allow read, write: if true;
+//        }
+//      }
+//    }
+//    (isso libera leitura/escrita pra quem tiver o link do site — combina
+//    com o espírito do app, que já é aberto pra qualquer pessoa confirmar)
+const FIREBASE_CONFIG = {
+    apiKey: 'SUA_API_KEY',
+    authDomain: 'SEU_PROJETO.firebaseapp.com',
+    projectId: 'SEU_PROJETO',
+    storageBucket: 'SEU_PROJETO.appspot.com',
+    messagingSenderId: 'SEU_SENDER_ID',
+    appId: 'SEU_APP_ID'
+};
+
+let db = null;
+let filesCollection = null;
+function checkFirebaseConfig() {
+    if (!FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey === 'SUA_API_KEY') {
+        throw new Error('Configuração do Firebase não preenchida. Edite FIREBASE_CONFIG no topo de js/script.js.');
+    }
+}
+function initFirebase() {
+    checkFirebaseConfig();
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    filesCollection = db.collection('arquivos');
+    filesCollection.orderBy('timestamp', 'desc').onSnapshot(snapshot => {
+        files = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (currentTab === 'confirm') renderFiles();
+    }, erro => {
+        console.error(erro);
+        alert(`Erro ao conectar com o Firebase: ${erro.message}`);
+    });
+}
 
 let currentUser = null;
 let files = [];
@@ -29,9 +81,10 @@ let pendingUploads = [];
 
 function init() {
     try {
-        const stored = localStorage.getItem('baiano_lista');
-        if (stored) files = JSON.parse(stored) || [];
-    } catch (e) { files = []; localStorage.removeItem('baiano_lista'); }
+        initFirebase();
+    } catch (e) {
+        alert(e.message);
+    }
 
     const savedUser = localStorage.getItem('baiano_user');
     if (savedUser) document.getElementById('nameInput').value = savedUser;
@@ -146,8 +199,7 @@ async function enviaServidor(id) {
     try {
         const dados = await cloudinaryUpload(arq.arquivo);
 
-        const novo = {
-            id: Date.now(),
+        await filesCollection.add({
             type: arq.type,
             name: dados.nome,
             publicId: dados.publicId,
@@ -159,10 +211,8 @@ async function enviaServidor(id) {
             rejectedBy: null,
             rejectComment: null,
             rejectAudio: null
-        };
+        });
 
-        files.unshift(novo);
-        localStorage.setItem('baiano_lista', JSON.stringify(files));
         remPend(id);
         if (pendingUploads.length === 0) {
             document.getElementById('fileInput').value = '';
@@ -201,28 +251,28 @@ function card(f) {
     if (f.type === 'image') {
         mid = `<div class="file-media"><img src="${caminho}" onclick="openLightbox('${caminho}')">
         <div class="file-overlay"><span class="file-badge">👤 ${escapeHtml(f.sender)}</span>
-        <button class="btn-delete" onclick="del(${f.id})">✕</button></div></div>`;
+        <button class="btn-delete" onclick="del('${f.id}')">✕</button></div></div>`;
     } else if (f.type === 'video') {
         mid = `<div class="file-media"><video src="${caminho}" controls></video>
         <div class="file-overlay"><span class="file-badge">👤 ${escapeHtml(f.sender)}</span>
-        <button class="btn-delete" onclick="del(${f.id})">✕</button></div></div>`;
+        <button class="btn-delete" onclick="del('${f.id}')">✕</button></div></div>`;
     } else {
         mid = `<div class="file-media"><div class="file-media-doc"><div class="doc-icon">📄</div>
         <div class="doc-name">${escapeHtml(f.name)}</div>
         <a href="${caminho}" download="${escapeHtml(f.name)}" class="btn-download">Baixar</a></div>
-        <div class="file-overlay" style="top:auto;bottom:12px;right:12px;"><button class="btn-delete" onclick="del(${f.id})">✕</button></div></div>`;
+        <div class="file-overlay" style="top:auto;bottom:12px;right:12px;"><button class="btn-delete" onclick="del('${f.id}')">✕</button></div></div>`;
     }
 
     let act = '';
     if (f.status === 'pending') {
         act = `<div class="file-actions"><div class="action-pending">
-        <button class="btn-approve" onclick="aprov(${f.id})">APROVAR</button>
-        <button class="btn-reject" onclick="abreModal(${f.id})">REPROVAR</button></div></div>`;
+        <button class="btn-approve" onclick="aprov('${f.id}')">APROVAR</button>
+        <button class="btn-reject" onclick="abreModal('${f.id}')">REPROVAR</button></div></div>`;
     } else if (f.status === 'approved') {
         act = `<div class="file-actions"><div class="action-approved">
         <div class="action-approved-header">✅ APROVADO</div>
         <div class="action-approved-by">Por: <span>${escapeHtml(f.approvedBy)}</span></div>
-        <button class="btn-change-mind" onclick="muda(${f.id})">Mudei de ideia</button></div></div>`;
+        <button class="btn-change-mind" onclick="muda('${f.id}')">Mudei de ideia</button></div></div>`;
     } else {
         let txt = f.rejectComment ? `<div class="reject-comment-text">${escapeHtml(f.rejectComment)}</div>` : '';
         let aud = f.rejectAudio ? `<audio controls src="${f.rejectAudio}">` : '';
@@ -230,51 +280,59 @@ function card(f) {
         <div class="action-rejected-header">❌ REPROVADO</div>
         <div class="action-rejected-by">Por: <span>${escapeHtml(f.rejectedBy)}</span></div>
         ${txt}${aud ? `<div class="audio-comment-box">${aud}</div>` : ''}
-        <button class="btn-change-mind" onclick="muda(${f.id})">Mudei de ideia</button></div></div>`;
+        <button class="btn-change-mind" onclick="muda('${f.id}')">Mudei de ideia</button></div></div>`;
     }
     return `<div class="file-card">${mid}${act}</div>`;
 }
 
-function aprov(id) {
-    const f = files.find(x => x.id === id);
-    if (!f) return;
-    f.status = 'approved';
-    f.approvedBy = currentUser;
-    salva();
+async function aprov(id) {
+    try {
+        await filesCollection.doc(id).update({ status: 'approved', approvedBy: currentUser });
+    } catch (e) { alert(`Erro: ${e.message}`); }
 }
 function abreModal(id) { pendingRejectId = id; document.getElementById('rejectModal').classList.add('active'); limpaRec(); }
 function closeRejectModal() { document.getElementById('rejectModal').classList.remove('active'); limpaRec(); pendingRejectId = null; }
-function confirmReject() {
-    const f = files.find(x => x.id === pendingRejectId);
-    if (!f) return;
-    f.status = 'rejected';
-    f.rejectedBy = currentUser;
-    f.rejectComment = document.getElementById('rejectText').value.trim() || null;
-    f.rejectAudio = audioBlob ? URL.createObjectURL(audioBlob) : null;
-    salva(); closeRejectModal();
+async function confirmReject() {
+    if (!pendingRejectId) return;
+    const btn = document.querySelector('#rejectModal .modal-btn-confirm');
+    if (btn) { btn.disabled = true; }
+    try {
+        let rejectAudioUrl = null;
+        if (audioBlob) {
+            const audioFile = new File([audioBlob], `audio_${Date.now()}.webm`, { type: 'audio/webm' });
+            const dados = await cloudinaryUpload(audioFile);
+            rejectAudioUrl = dados.url;
+        }
+        await filesCollection.doc(pendingRejectId).update({
+            status: 'rejected',
+            rejectedBy: currentUser,
+            rejectComment: document.getElementById('rejectText').value.trim() || null,
+            rejectAudio: rejectAudioUrl
+        });
+        closeRejectModal();
+    } catch (e) {
+        alert(`Erro: ${e.message}`);
+    } finally {
+        if (btn) { btn.disabled = false; }
+    }
 }
-function muda(id) {
-    const f = files.find(x => x.id === id);
-    if (!f) return;
-    f.status = 'pending'; f.approvedBy = f.rejectedBy = f.rejectComment = f.rejectAudio = null;
-    salva();
+async function muda(id) {
+    try {
+        await filesCollection.doc(id).update({ status: 'pending', approvedBy: null, rejectedBy: null, rejectComment: null, rejectAudio: null });
+    } catch (e) { alert(`Erro: ${e.message}`); }
 }
 
-// ===== REMOVE ARQUIVO DA LISTA =====
+// ===== REMOVE ARQUIVO DA LISTA (COMPARTILHADA) =====
 // O upload "unsigned" do Cloudinary não permite apagar o arquivo original
 // pelo navegador sem expor outro segredo (a API Secret da conta). Por isso,
-// isso aqui remove o arquivo da lista/confirmação — o arquivo em si continua
+// isso aqui remove o registro do Firestore — o arquivo em si continua
 // guardado na sua conta do Cloudinary, e pode ser apagado por lá se quiser
 // (Console > Media Library) caso precise liberar espaço.
-function del(id) {
-    if (!confirm('Remover esse arquivo da lista? (o arquivo continua salvo na sua conta Cloudinary; para apagar de vez, use o Media Library do Cloudinary)')) return;
-    files = files.filter(x => x.id !== id);
-    salva();
-}
-
-function salva() {
-    localStorage.setItem('baiano_lista', JSON.stringify(files));
-    renderFiles();
+async function del(id) {
+    if (!confirm('Remover esse arquivo da lista pra todo mundo? (o arquivo continua salvo na sua conta Cloudinary; para apagar de vez, use o Media Library do Cloudinary)')) return;
+    try {
+        await filesCollection.doc(id).delete();
+    } catch (e) { alert(`Erro: ${e.message}`); }
 }
 
 async function toggleRec() {
