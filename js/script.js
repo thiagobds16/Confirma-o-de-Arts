@@ -37,12 +37,12 @@ const CLOUDINARY_CONFIG = {
 //    (isso libera leitura/escrita pra quem tiver o link do site — combina
 //    com o espírito do app, que já é aberto pra qualquer pessoa confirmar)
 const FIREBASE_CONFIG = {
-    apiKey: 'SUA_API_KEY',
-    authDomain: 'SEU_PROJETO.firebaseapp.com',
-    projectId: 'SEU_PROJETO',
-    storageBucket: 'SEU_PROJETO.appspot.com',
-    messagingSenderId: 'SEU_SENDER_ID',
-    appId: 'SEU_APP_ID'
+    apiKey: 'AIzaSyA9KXRqOUAqFq618MkEg0HKLFf9ELn36FI',
+    authDomain: 'baiano-confirma.firebaseapp.com',
+    projectId: 'baiano-confirma',
+    storageBucket: 'baiano-confirma.firebasestorage.app',
+    messagingSenderId: '26899881448',
+    appId: '1:26899881448:web:8b559a4df8e62e82af585d'
 };
 
 let db = null;
