@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baiano Confirma</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+    <div class="bg-mesh"></div>
+    <div class="noise"></div>
+
+    <div class="app">
+        <header class="header">
+            <div class="header-inner">
+                <div class="logo">
+                    <div class="logo-icon">B</div>
+                    <span class="logo-text">Baiano Confirma</span>
+                </div>
+                <div class="user-pill" id="userPill">
+                    <span class="dot"></span>
+                    <span id="userNameDisplay"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tela de Login -->
+        <div class="login-screen" id="loginScreen">
+            <div class="login-card">
+                <div class="login-avatar">B</div>
+                <h1 class="login-title">Bem-vindo</h1>
+                <p class="login-subtitle">Informe seu nome para acessar o sistema</p>
+                <div class="input-group">
+                    <input type="text" id="nameInput" placeholder="Digite seu nome" autocomplete="name">
+                </div>
+                <button class="btn-primary" onclick="doLogin()">Entrar</button>
+            </div>
+        </div>
+
+        <!-- Conteúdo Principal -->
+        <div id="mainContent" style="display: none;">
+            <div class="tabs">
+                <button class="tab active" id="tabConfirm" onclick="switchTab('confirm')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Confirmação
+                </button>
+                <button class="tab" id="tabUpload" onclick="switchTab('upload')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    Enviar Arquivos
+                </button>
+            </div>
+
+            <div class="content-area">
+                <!-- Aba Confirmação -->
+                <div id="viewConfirm">
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <div class="empty-icon">📭</div>
+                        <div class="empty-title">Nenhum arquivo enviado ainda</div>
+                        <p>Quando houver arquivos, aparecerão aqui para você avaliar.</p>
+                    </div>
+                    <div id="filesContainer"></div>
+                </div>
+
+                <!-- Aba Envio -->
+                <div id="viewUpload" style="display: none;">
+                    <div class="upload-card">
+                        <h3 class="upload-card-title">📤 Enviar novos arquivos</h3>
+                        <div class="upload-zone" id="dropZone">
+                            <input type="file" id="fileInput" multiple accept="image/*,video/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx" style="display: none;" onchange="handleFiles(this.files)">
+                            <div class="upload-zone-icon">📁</div>
+                            <div class="upload-zone-title">Clique ou arraste arquivos aqui</div>
+                            <div class="upload-zone-subtitle">Imagens, vídeos e documentos em geral</div>
+                        </div>
+                        <div class="preview-list" id="previewList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Reprovar -->
+    <div class="modal-overlay" id="rejectModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon">✕</div>
+                <h3 class="modal-title">Reprovar Arquivo</h3>
+            </div>
+            <p class="modal-subtitle">Informe o motivo da reprovação</p>
+            <div class="modal-body">
+                <label class="modal-label">Motivo (texto)</label>
+                <textarea class="modal-textarea" id="rejectText" placeholder="Descreva o motivo..."></textarea>
+                
+                <div class="audio-recorder">
+                    <div class="audio-recorder-header">
+                        <button class="mic-icon" id="micBtn" onclick="toggleRec()">🎤</button>
+                        <div>
+                            <div class="rec-status">Gravação de áudio</div>
+                            <div class="rec-timer" id="recTimer">00:00</div>
+                        </div>
+                    </div>
+                    <div class="audio-wave stopped" id="wave">
+                        <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <div id="audioPlayerContainer"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" onclick="closeRejectModal()">Cancelar</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmReject()">Confirmar Reprovação</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+        <img id="lightboxImg" alt="">
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>init();</script>
+</body>
+</html>
